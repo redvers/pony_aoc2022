@@ -14,41 +14,35 @@ actor Main
     let path = FilePath(FileAuth(env.root), filename)
     match OpenFile(path)
     | let file: File =>
-      let fl: FileLines = FileLines(file)
-      let pa: PartA = PartA(env, fl)
+      let lines: FileLines = FileLines(file)
 
-      var callist: Array[USize] ref = recover Array[USize] end
-      for v in pa.data.values() do
-        callist.push(v)
-      end
+      /* The Elves Class' constructor takes the FileLines Iterator and
+       * processes them.                                               */
+      let elves: Elves = Elves(lines)
 
-      callist = Sort[Array[USize], USize](callist)
-
+      // Retrieve and sort the Array of Elf Calorie Contents
+      let callist: Array[USize] = Sort[Array[USize], USize](elves.data)
       try
+        // The highest value is the last value.
         env.out.print("(65912) MaxCal: " + callist.apply(callist.size()-1)?.string())
+
+        // The highest three can be just popped off the top and summed
         var total3: USize = callist.pop()? + callist.pop()? + callist.pop()?
         env.out.print("(195625) Total for three: " + total3.string())
       end
-
-
     else
       env.err.print("Error opening file '" + filename + "'")
     end
 
+class Elves
+  let data: Array[USize] ref = Array[USize]
 
-class PartA
-  let env: Env
-  let data: Map[USize, USize] ref = recover Map[USize, USize] end
-  var elfnum: USize = 1
-
-  new create(env': Env, lines: FileLines) =>
-    env = env'
-
+  new create(lines: FileLines) =>
     for line in lines do
       if (line == "") then
-        elfnum = elfnum + 1
+        data.push(0)
       else
-        try data.update(elfnum, data.get_or_else(elfnum, 0) + line.usize()?) end
+        try data.push(data.pop()? + line.usize()?) end
       end
     end
 
