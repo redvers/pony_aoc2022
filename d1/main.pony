@@ -16,12 +16,7 @@ actor Main
     | let file: File =>
       let lines: FileLines = FileLines(file)
 
-      /* The Elves Class' constructor takes the FileLines Iterator and
-       * processes them.                                               */
-      let elves: Elves = Elves(lines)
-
-      // Retrieve and sort the Array of Elf Calorie Contents
-      let callist: Array[USize] = Sort[Array[USize], USize](elves.data)
+      let callist: Array[USize] = Sort[Array[USize], USize](process(lines))
       try
         // The highest value is the last value.
         env.out.print("(65912) MaxCal: " + callist.apply(callist.size()-1)?.string())
@@ -34,10 +29,8 @@ actor Main
       env.err.print("Error opening file '" + filename + "'")
     end
 
-class Elves
-  let data: Array[USize] ref = Array[USize]
-
-  new create(lines: FileLines) =>
+  fun process(lines: FileLines): Array[USize] =>
+    let data: Array[USize] ref = Array[USize]
     for line in lines do
       if (line == "") then
         data.push(0)
@@ -45,4 +38,5 @@ class Elves
         try data.push(data.pop()? + line.usize()?) end
       end
     end
+    data
 
