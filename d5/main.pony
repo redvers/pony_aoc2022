@@ -1,19 +1,30 @@
 use "files"
 use "collections"
 
-use @printf[I32](fmt: Pointer[U8] tag, ...)
+type CrateMoverModel is (CrateMover9000 | CrateMover9001)
 
 actor Main
   let env: Env
-  let stack: Array[Array[String] ref] ref = [[] ; [] ; []; []; []; []; []; []; []]
 
   new create(env': Env) =>
     env = env'
     for filename in env.args.slice(1).values() do
-      process_file(filename)
+      CrateMover(env, filename, CrateMover9000).process_file()  // GFTNRBZPF
+      CrateMover(env, filename, CrateMover9001).process_file()  // VRQWPDSGP
     end
 
-  fun ref process_file(filename: String val) =>
+class CrateMover
+  let env: Env
+  let cmmodel: CrateMoverModel
+  let filename: String val
+  let stack: Map[USize, String ref] = Map[USize, String ref]
+
+  new create(env': Env, filename': String val, cmmodel': CrateMoverModel) =>
+    env = env'
+    filename = filename'
+    cmmodel = cmmodel'
+
+  fun ref process_file() =>
     let path = FilePath(FileAuth(env.root), filename)
     match OpenFile(path)
     | let file: File =>
@@ -31,97 +42,60 @@ actor Main
         else
           false
         end
-        env.out.print(first.string() + ": " + line.clone())
         if (first) then statetext.push(consume line) else movetext.push(consume line) end
       end
 
+      file.dispose()
+
       make_stacks(statetext)
-      print_stack()
-      for moveline in movetext.values() do
-        try decode_and_move(moveline)? else env.out.print("FAIL") end
-      end
-      try
-        print_final()?
-      else
-        env.out.print("It all went horribly wrong")
-      end
 
+			for moveline in movetext.values() do
+				try decode_and_move(moveline)? else env.out.print("FAIL") end
+			end
 
+      print_stacks()
+      print_result()
     else
       env.err.print("Error opening file '" + filename + "'")
     end
-
-
-  fun print_final()? =>
-    env.out.write("Final Result: ")
-    for str in stack.values() do
-      env.out.write(str(str.size() -1)?)
-    end
-    env.out.print("")
-
-
-  fun print_stack() =>
-    env.out.print("")
-    for (index, line) in stack.pairs() do
-      env.out.write("Index: ->" + index.string() + ": ")
-      for chrstr in line.values() do
-        env.out.write(chrstr)
-      end
-      env.out.print("<-")
-    end
-    env.out.print("")
 
   fun ref decode_and_move(line: String val) ? =>
     var tokens: Array[String] = line.split_by(" ")
     let count: USize = tokens(1)?.usize()?
     let from: USize = tokens(3)?.usize()?
     let to: USize = tokens(5)?.usize()?
-    env.out.print("Count: " + count.string())
-    env.out.print("From: " + from.string())
-    env.out.print("To: " + to.string())
-    moves(count, from, to)
+    cmmodel.moves(stack, count, from, to)
 
-  fun ref moves(count: USize, from: USize, to: USize) =>
-    var cnt: USize = count
-    while (cnt > 0) do
-      move(from, to)
-      cnt = cnt - 1
-    end
-    print_stack()
-
-  fun dline(line: Array[String val] ref) =>
-    env.out.write("dline: ")
-    for f in line.values() do
-      env.out.write(f)
-    end
-    env.out.print("")
-
-  fun ref move(from: USize, to: USize) =>
-    env.out.print(from.string() + " -> " + to.string())
+  fun print_stacks() =>
     try
-    let arrayfrom: USize = from - 1
-    let arrayto: USize = to - 1
-    var darray: Array[String] = stack(arrayto)?
-    var farray: Array[String] = stack(arrayfrom)?
-
-    let carried: String val = farray.pop()?
-    env.out.print("carried: " + carried)
-    darray.push(carried)
-    else
-      env.out.print("Failed to move")
+      for index in Range(1,10) do
+        env.out.print(index.string() + ": " + stack(index)?)
+      end
     end
 
+  fun ref print_result() =>
+    try
+			env.out.write("[" + cmmodel.string() + "]: ")
+			env.out.write("Final Result: ")
+      for index in Range(1,10) do
+				let offset: USize = stack(index)?.size() - 1
+        env.out.write(stack(index)?.substring(offset.isize()))
+      end
+    end
+		env.out.print("")
 
   fun ref make_stacks(text: Array[String val] ref) =>
     try
       text.pop()? // Throw away numbers
       while true do
         var line: String val = text.pop()?
-        var index: U8 = 0
+        var index: USize = 1
         for ptr in Range.create(1, line.size(), 4) do
           let c: U8 val = line.at_offset(ptr.isize())?
           if (c != ' ') then
-            stack(index.usize())?.push(String.from_array([c]))
+            var stackline: String ref = stack.get_or_else(index, recover String end)
+            stackline.push(c)
+            stack.insert(index, stackline)
           end
         index = index + 1
         end
@@ -129,9 +103,28 @@ actor Main
     end
 
 
+primitive CrateMover9000
+  fun string(): String => "CrateMover9000"
 
+  fun moves(stack: Map[USize, String ref], count: USize, from: USize, to: USize) =>
+    var cnt: USize = count
+    while (cnt > 0) do
+      try move(stack, from, to)? end
+      cnt = cnt - 1
+    end
 
+  fun move(stack: Map[USize, String ref], from: USize, to: USize) ? =>
+    let carried: U8 = stack(from)?.pop()?
+	  stack(to)?.push(carried)
 
+primitive CrateMover9001
+  fun string(): String => "CrateMover9001"
 
-
+  fun moves(stack: Map[USize, String ref], count: USize, from: USize, to: USize) =>
+    try
+      var size: USize = stack(from)?.size()
+      var snip: String ref = stack(from)?.substring((size - count).isize())
+      stack(from)?.truncate(size - count)
+      stack(to)?.append(snip)
+    end
 

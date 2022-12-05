@@ -1,3 +1,3 @@
 all:
 	ponyc .
-	./d5 data0
+	./d5 data1
