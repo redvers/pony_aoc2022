@@ -24,20 +24,85 @@ actor Main
       end
 
       try
-        left_to_right()?
-        env.out.print("-----")
-        right_to_left()?
-        env.out.print("-----")
-        bottom_to_top()?
-        env.out.print("-----")
-        top_to_bottom()?
-        env.out.print("-----")
+        var xptr: USize = 0
+        while (xptr < max_x) do
+          // Left To Right
+          var valline: Array[I8] = extract_left_to_right(xptr)?
+          var visline: Array[Bool] = calc_visibility(valline)
+          or_left_to_right(xptr, visline)?
+
+          // Right To Left
+          valline = valline.reverse()
+          visline = calc_visibility(valline)
+          or_left_to_right(xptr, visline.reverse())?
+          xptr = xptr + 1
+        end
+
+        var yptr: USize = 0
+        while (yptr < max_y) do
+          // Top To Bottom
+          var valline: Array[I8] = extract_top_to_bottom(yptr)?
+          var visline: Array[Bool] = calc_visibility(valline)
+          or_top_to_bottom(yptr, visline)?
+
+          // Bottom To Top
+          valline = valline.reverse()
+          visline = calc_visibility(valline)
+          or_top_to_bottom(yptr, visline.reverse())?
+
+          yptr = yptr + 1
+        end
       else
         env.out.print("OOF")
       end
 
       report_part_1()
     end
+
+  fun ref extract_left_to_right(x: USize): Array[I8] ? =>
+    data(x)?
+
+  fun ref or_left_to_right(x: USize, d: Array[Bool]) ? =>
+    var y: USize = 0
+    for value in d.values() do
+      if (value) then
+        visibility(x)?(y)? = true
+      end
+      y = y + 1
+    end
+
+  fun ref extract_top_to_bottom(yptr: USize): Array[I8] ? =>
+    let rv: Array[I8] = []
+    var xptr: USize = 0
+
+    while (xptr < max_x) do
+      rv.push(data(xptr)?(yptr)?)
+      xptr = xptr + 1
+    end
+    rv
+
+  fun ref or_top_to_bottom(y: USize, d: Array[Bool]) ? =>
+    var x: USize = 0
+    for value in d.values() do
+      if (value) then
+        visibility(x)?(y)? = true
+      end
+      x = x + 1
+    end
+
+  fun calc_visibility(valline: Array[I8]): Array[Bool] =>
+    let rv: Array[Bool] = Array[Bool]
+    var tallesttree: I8 = -1
+
+    for value in valline.values() do
+      if (value > tallesttree) then
+        rv.push(true)
+        tallesttree = value
+      else
+        rv.push(false)
+      end
+    end
+    rv
 
   fun report_part_1() =>
     var count: USize = 0
@@ -70,90 +135,6 @@ actor Main
     else
       Debug.err("Error opening file '" + filename + "'")
     end
-
-
-  fun ref left_to_right() ? =>
-    var xptr: USize = 0
-    var yptr: USize = 0
-
-    env.out.print("Forest has dimensions: " + max_x.string() + " x " + max_y.string())
-
-    while (xptr < max_x) do
-      var tallesttree: I8 = -1
-      while (yptr < max_y) do
-        if (data(xptr)?(yptr)? > tallesttree) then
-          env.out.write("*")
-          tallesttree = data(xptr)?(yptr)?
-          visibility(xptr)?(yptr)? = true
-        end
-        env.out.write(data(xptr)?(yptr)?.string())
-        yptr = yptr + 1
-      end
-      env.out.print("")
-      xptr = xptr + 1
-      yptr = 0
-    end
-
-  fun ref right_to_left() ? =>
-    var xptr: USize = 0
-    var yptr: USize = max_y - 1
-
-    while (xptr < max_x) do
-      var tallesttree: I8 = -1
-      while (yptr.isize() >= 0) do
-        if (data(xptr)?(yptr)? > tallesttree) then
-          env.out.write("*")
-          tallesttree = data(xptr)?(yptr)?
-          visibility(xptr)?(yptr)? = true
-        end
-        env.out.write(data(xptr)?(yptr)?.string())
-        yptr = yptr - 1
-      end
-      xptr = xptr + 1
-      yptr = max_y - 1
-      env.out.print("")
-    end
-
-  fun ref top_to_bottom() ? =>
-    var xptr: USize = 0
-    var yptr: USize = 0
-
-    while (yptr < max_y) do
-      var tallesttree: I8 = -1
-      while (xptr < max_x) do
-        if (data(xptr)?(yptr)? > tallesttree) then
-          env.out.write("*")
-          tallesttree = data(xptr)?(yptr)?
-          visibility(xptr)?(yptr)? = true
-        end
-        env.out.write(data(xptr)?(yptr)?.string())
-        xptr = xptr + 1
-      end
-      env.out.print("")
-      yptr = yptr + 1
-      xptr = 0
-    end
-  fun ref bottom_to_top() ? =>
-    var xptr: USize = max_x - 1
-    var yptr: USize = 0
-
-    while (yptr < max_y) do
-      var tallesttree: I8 = -1
-      while (xptr < max_x) do
-        if (data(xptr)?(yptr)? > tallesttree) then
-          env.out.write("*")
-          tallesttree = data(xptr)?(yptr)?
-          visibility(xptr)?(yptr)? = true
-        end
-        env.out.write(data(xptr)?(yptr)?.string())
-        xptr = xptr - 1
-      end
-      yptr = yptr + 1
-      xptr = max_x - 1
-      env.out.print("")
-    end
-
-
 
   fun process_line(line: String): (Array[I8], Array[Bool]) =>
     let rv: Array[I8] = []
